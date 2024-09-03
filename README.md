@@ -1,2 +1,2 @@
 # cobalt-analytics
-Cobalt analytics containing different solutions
+Cobalt analytics repository containing different cobalt solutions
