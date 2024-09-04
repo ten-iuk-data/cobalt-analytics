@@ -157,7 +157,7 @@ def delete_data(bucket, folder):
 
 
 # Load and broadcast model
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder="s3://cobalt-ml/libraries/")
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder="s3://cobalt-analytics/libraries/")
 bc_model = sc.broadcast(model)
 
 

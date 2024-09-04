@@ -2,6 +2,11 @@ data "aws_iam_role" "existing_glue_role" {
   name = var.iam_role
 }
 
+locals {
+  glue_src_path = "C:/Users/TOtt01/OneDrive - UKRI/Documents/cobalt-analytics/duplicate-application-identification/glue/"
+}
+
+
 resource "aws_s3_object" "duplicate_application_identification" {
   bucket = var.s3_bucket
   key    = "glue/scripts/duplicate_application_identification.py"
