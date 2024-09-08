@@ -106,7 +106,8 @@ def read_data(spark, bucket, key, db, schema=False):
     if key.endswith('.sql'):
         response = s3.get_object(Bucket=bucket, Key=key)
         query = response['Body'].read().decode('utf-8')
-        query = query.replace('db', db)
+        db_name = db.split('.')[-1]
+        query = query.replace('db', db_name)
 
         athena = boto3.client('athena')
         s3_output = f's3://{bucket}/{key}/athena-results/athena_query_results_folder'
