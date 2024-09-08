@@ -106,6 +106,7 @@ def read_data(spark, bucket, key, db, schema=False):
     if key.endswith('.sql'):
         response = s3.get_object(Bucket=bucket, Key=key)
         query = response['Body'].read().decode('utf-8')
+        query = query.replace('db', db)
 
         athena = boto3.client('athena')
         s3_output = f's3://{bucket}/{key}/athena-results/athena_query_results_folder'
@@ -128,7 +129,9 @@ def read_data(spark, bucket, key, db, schema=False):
             return enforce_schema(df) if schema else df
             
         else:
-            raise Exception(f"Athena query failed with state: {state}")
+            reason = response['QueryExecution']['Status'].get('StateChangeReason', 'No reason provided')
+            logger.error(f"Athena query failed with state: {state}. Reason: {reason}")
+            raise Exception(f"Athena query failed with state: {state}. Reason: {reason}")
     else:
         input_path = f's3://{bucket}/{key}'
         try:
