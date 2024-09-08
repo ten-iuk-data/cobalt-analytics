@@ -41,5 +41,28 @@ resource "aws_glue_job" "duplicate_application_identification" {
     "--job-bookmark-option"     = "job-bookmark-disable"
     "--additional-python-modules" = "sentence-transformers"
     "--TempDir"                   = "s3://${var.s3_bucket}/glue/temp/"
+    "--glue_database"             = var.glue_database
+    "--semantic_bucket"           = var.semantic_bucket
+    "--semantic_input_key"        = var.semantic_input_key
+    "--cobalt_bucket"             = var.cobalt_bucket
+    "--cobalt_output_duplicates"  = var.cobalt_output_duplicates
+    "--cobalt_output_processed"   = var.cobalt_output_processed
+    "--business_rules_key"        = var.business_rules_key
+    "--sql_key"                   = var.sql_key
   }
 }
+
+
+resource "aws_glue_trigger" "duplicate_application_identification_trigger" {
+  name     = "${aws_glue_job.duplicate_application_identification.name}-daily-trigger"
+  type     = "SCHEDULED"
+  schedule = var.glue_schedule_expression
+
+  actions {
+    job_name = aws_glue_job.duplicate_application_identification.name
+  }
+
+  start_on_creation = true
+}
+
+

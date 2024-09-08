@@ -1,5 +1,3 @@
-# s3://iukpreprod-data-landing-zone/semantic/ - bucket
-# cobalt_application_duplicates - folder
 
 import sys
 import boto3
@@ -23,7 +21,16 @@ from functools import reduce as reduce_func
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer, BucketedRandomProjectionLSH
 from pyspark.ml.linalg import Vectors, VectorUDT
 import pandas as pd
-import numpy as np
+import logging
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 
@@ -41,7 +48,16 @@ spark.conf.set("spark.sql.autoBroadcastJoinThreshold", 52428800)
 spark.conf.set("spark.sql.broadcastTimeout", 1800)
 spark.conf.set("spark.sql.adaptive.enabled", "true")
 
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+args = getResolvedOptions(sys.argv, [
+    'glue_database', 
+    'semantic_bucket', 
+    'semantic_input_key', 
+    'cobalt_bucket', 
+    'cobalt_output_duplicates', 
+    'cobalt_output_processed', 
+    'business_rules_key', 
+    'sql_key'
+])
 job.init(args['JOB_NAME'], args)
 
 
@@ -83,19 +99,17 @@ def enforce_schema(df):
     
     
 
-
 # Read data
-def read_data(spark, bucket, key, schema=False):
+def read_data(spark, bucket, key, db, schema=False):
     if key.endswith('.sql'):
         response = s3.get_object(Bucket=bucket, Key=key)
         query = response['Body'].read().decode('utf-8')
 
         athena = boto3.client('athena')
-        glue_database = 'preprod_semantic_db'
-        s3_output = 's3://iukpreprod-data-landing-zone/athena-results/cobalt_athena_query_results/'
+        s3_output = f's3://{bucket}/{key}/athena-results/athena_query_results_folder'
         response = athena.start_query_execution(
             QueryString=query,
-            QueryExecutionContext={'Database': glue_database},
+            QueryExecutionContext={'Database': db},
             ResultConfiguration={'OutputLocation': s3_output}
         )
         query_execution_id = response['QueryExecutionId']
@@ -143,21 +157,8 @@ def write_data(df, bucket, key, partition_by=None, append_mode=True, partition=F
 
 
 
-
-# delete data
-def delete_data(bucket, folder):
-    paginator = s3.get_paginator('list_objects_v2')
-    for page in paginator.paginate(Bucket=bucket, Prefix=folder):
-        if 'Contents' in page:
-            for obj in page['Contents']:
-                s3.delete_object(Bucket=bucket, Key=obj['Key'])
-    print(f"All files in {folder} have been deleted.")
-
-
-
-
 # Load and broadcast model
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder="s3://cobalt-analytics/libraries/")
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", cache_folder="s3://cobalt-ml/libraries/")
 bc_model = sc.broadcast(model)
 
 
@@ -185,8 +186,8 @@ def approximate_matching(new_apps, all_apps, threshold=0.5):
     transformed_new = model.transform(new_df)
     transformed_all = model.transform(all_df)
     candidates = model.approxSimilarityJoin(transformed_new, transformed_all, threshold, distCol="distance")
-    print("candidates columns: ", candidates.columns)
-    print("candidates shape (rows, columns): ", (candidates.count(), len(candidates.columns)))
+    logger.info(f"candidates columns: {candidates.columns}")
+    logger.info(f"candidates shape (rows, columns): {(candidates.count(), len(candidates.columns))}")
     
     potential_matches = candidates.filter(col("datasetA.applicationid") < col("datasetB.applicationid"))
     columns = [
@@ -270,20 +271,20 @@ def preprocess_applications(df):
 # Categorize applications
 def categorize_applications(new_apps, all_apps, rules):
     
-    print("Before preprocess_applications")
-    print("new_apps columns: ", new_apps.columns)
-    print("new_apps shape (rows, columns): ", (new_apps.count(), len(new_apps.columns)))
-    print("all_apps columns: ", all_apps.columns)
-    print("all_apps shape (rows, columns): ", (all_apps.count(), len(all_apps.columns)))
+    logger.info("Before preprocess_applications")
+    logger.info(f"new_apps columns: {new_apps.columns}")
+    logger.info(f"new_apps shape (rows, columns): {(new_apps.count(), len(new_apps.columns))}")
+    logger.info(f"all_apps columns: {all_apps.columns}")
+    logger.info(f"all_apps shape (rows, columns): {(all_apps.count(), len(all_apps.columns))}")
     
     new_apps = preprocess_applications(new_apps)
     all_apps = preprocess_applications(all_apps)
     
-    print("After preprocess_applications")
-    print("new_apps columns: ", new_apps.columns)
-    print("new_apps shape (rows, columns): ", (new_apps.count(), len(new_apps.columns)))
-    print("all_apps columns: ", all_apps.columns)
-    print("all_apps shape (rows, columns): ", (all_apps.count(), len(all_apps.columns)))
+    logger.info("After preprocess_applications")
+    logger.info(f"new_apps columns: {new_apps.columns}")
+    logger.info(f"new_apps shape (rows, columns): {(new_apps.count(), len(new_apps.columns))}")
+    logger.info(f"all_apps columns: {all_apps.columns}")
+    logger.info(f"all_apps shape (rows, columns): {(all_apps.count(), len(all_apps.columns))}")
     
     
     final_schema = StructType([
@@ -300,9 +301,9 @@ def categorize_applications(new_apps, all_apps, rules):
     
     # Stage 1: Approximate Matching
     potential_matches = approximate_matching(new_apps, all_apps)
-    print("After potential_matches")
-    print("After potential_matches columns: ", potential_matches.columns)
-    print("potential_matches shape (rows, columns): ", (potential_matches.count(), len(potential_matches.columns)))
+    logger.info("After potential_matches")
+    logger.info(f"After potential_matches columns: {potential_matches.columns}")
+    logger.info(f"potential_matches shape (rows, columns): {(potential_matches.count(), len(potential_matches.columns))}")
 
     if potential_matches is None or potential_matches.count() == 0:
         return potential_matches
@@ -310,8 +311,8 @@ def categorize_applications(new_apps, all_apps, rules):
     
     # Stage 2: Accurate Matching with Sentence Transformer
     df_rule = process_in_batches(potential_matches)
-    print("After Accurate Matching df columns: ", df_rule.columns)
-    print("Accurate Matching df shape (rows, columns): ", (df_rule.count(), len(df_rule.columns)))
+    logger.info(f"After Accurate Matching df columns: {df_rule.columns}")
+    logger.info(f"Accurate Matching df shape (rows, columns): {(df_rule.count(), len(df_rule.columns))}")
     
     all_matches = []
     
@@ -321,9 +322,8 @@ def categorize_applications(new_apps, all_apps, rules):
         condition = reduce_func(lambda x, y: x & y, condition_exprs)
         
         joined_df = df_rule.filter(condition)
-        
-        print("joined_df columns: ", joined_df.columns)
-        print("joined_df shape (rows, columns): ", (joined_df.count(), len(joined_df.columns)))
+        logger.info(f"joined_df columns: {joined_df.columns}")
+        logger.info(f"joined_df shape (rows, columns): {(joined_df.count(), len(joined_df.columns))}")
                       
         if 'window_aggregation' in rule:
             window_spec = Window.partitionBy(col('a_applicationid'))
@@ -346,8 +346,8 @@ def categorize_applications(new_apps, all_apps, rules):
     final_df = reduce_func(lambda x, y: x.unionByName(y), all_matches)
     final_df = final_df.dropDuplicates()
     
-    print("final_df columns: ", final_df.columns)
-    print("final_df shape (rows, columns): ", (final_df.count(), len(final_df.columns)))
+    logger.info(f"final_df columns: {final_df.columns}")
+    logger.info(f"final_df shape (rows, columns): {(final_df.count(), len(final_df.columns))}")
     
     return final_df
 
@@ -355,23 +355,22 @@ def categorize_applications(new_apps, all_apps, rules):
 
 # Main
 def main():
-    root_bucket = 'iukpreprod-data-landing-zone'
-    semantic_bucket = 'iukpreprod-data-landing-zone/semantic'
-    semantic_input_key = 'dim_application/dim_application.parquet'
-    cobalt_bucket = 'cobalt-ml'
-    cobalt_output_duplicates = 'cobalt_application_dups'
-    cobalt_output_processed = 'cobalt_application_processed'
-    business_rules_key = 'iukprod/input/duplicate_applications_check.yaml'
-    sql_key = 'iukprod/input/get_new_applications.sql'
-    athena_query_results_folder = 'athena-results/cobalt_athena_query_results/'
+    glue_database = args['glue_database']
+    semantic_bucket = args['semantic_bucket']
+    semantic_input_key = args['semantic_input_key']
+    cobalt_bucket = args['cobalt_bucket']
+    cobalt_output_duplicates = args['cobalt_output_duplicates']
+    cobalt_output_processed = args['cobalt_output_processed']
+    business_rules_key = args['business_rules_key']
+    sql_key = args['sql_key']
     
     
     try:
         # Read new applications
-        new_apps = read_data(spark, cobalt_bucket, sql_key, schema=True)
+        new_apps = read_data(spark, cobalt_bucket, sql_key, glue_database, schema=True)
 
         # Read all applications
-        all_apps = read_data(spark, semantic_bucket, semantic_input_key)
+        all_apps = read_data(spark, semantic_bucket, semantic_input_key, glue_database)
 
         # Read business rules
         rules = read_business_rules(cobalt_bucket, business_rules_key)
@@ -387,12 +386,13 @@ def main():
         
         # Update processed applications
         write_data(new_apps, semantic_bucket, cobalt_output_processed, partition=False, add_timestamp=True)
-        
-        # Delete temp query results for new applications
-        delete_data(root_bucket, athena_query_results_folder)
+
+        # Overwrite temp query results with the new query results
+        write_data(new_apps, semantic_bucket, cobalt_output_processed, append_mode=False)
+
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logger.error(f"Error: {str(e)}")
         raise
     
     finally:
