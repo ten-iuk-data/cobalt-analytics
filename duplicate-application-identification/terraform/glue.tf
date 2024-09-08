@@ -32,6 +32,7 @@ resource "aws_glue_job" "duplicate_application_identification" {
   }
 
   default_arguments = {
+    "--job-name"                = "duplicate_application_identification"
     "--class"                   = "GlueApp"
     "--enable-job-insights"     = "true"
     "--enable-auto-scaling"     = "true"
@@ -49,7 +50,12 @@ resource "aws_glue_job" "duplicate_application_identification" {
     "--cobalt_output_processed"   = var.cobalt_output_processed
     "--business_rules_key"        = var.business_rules_key
     "--sql_key"                   = var.sql_key
+    "--enable-continuous-cloudwatch-log" = "true"
+    "--enable-continuous-log-filter"     = "true"
+    "--continuous-log-logGroup"          = "/aws-glue/jobs/logs-v2"
+    "--continuous-log-logStreamPrefix"   = "duplicate_application_identification/"
   }
+
 }
 
 

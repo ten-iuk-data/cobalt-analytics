@@ -56,9 +56,11 @@ args = getResolvedOptions(sys.argv, [
     'cobalt_output_duplicates', 
     'cobalt_output_processed', 
     'business_rules_key', 
-    'sql_key'
+    'sql_key',
+    'JOB_NAME'
 ])
-job.init(args['JOB_NAME'], args)
+job_name = args.get('JOB_NAME', 'duplicate_application_identification')
+job.init(job_name, args)
 
 
 
@@ -364,6 +366,9 @@ def main():
     business_rules_key = args['business_rules_key']
     sql_key = args['sql_key']
     
+    new_apps = None
+    all_apps = None
+    final_df = None
     
     try:
         # Read new applications
@@ -396,10 +401,14 @@ def main():
         raise
     
     finally:
+        
         # Unpersist Datasets
-        new_apps.unpersist()
-        all_apps.unpersist()
-        final_df.unpersist()
+        if new_apps:
+            new_apps.unpersist()
+        if all_apps:
+            all_apps.unpersist()
+        if final_df:
+            final_df.unpersist()
         
         # End the job
         job.commit()
