@@ -16,7 +16,6 @@ resource "aws_s3_object" "duplicate_application_identification" {
 
 resource "aws_glue_job" "duplicate_application_identification" {
   glue_version     = "4.0"
-  max_retries      = 3
   name             = "duplicate_application_identification"
   description      = "Identifies applications from competitions that are duplicates"
   role_arn         = data.aws_iam_role.existing_glue_role.arn
