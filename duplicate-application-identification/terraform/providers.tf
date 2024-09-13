@@ -10,15 +10,14 @@ terraform {
 
   provider "aws" {
     region = "eu-west-2"
-    profile = "default"
+    profile = var.aws_profile
 }
 
-# Terraform state will be stored in S3
 terraform {
   backend "s3" {
     bucket = "cobalt-analytics"
     key    = "terraform/terraform.tfstate"
     region = "eu-west-2"
-    profile = "default"
+    profile = "ukri_staging_keys"
   }
 }

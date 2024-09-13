@@ -19,7 +19,7 @@ resource "aws_glue_job" "duplicate_application_identification" {
   name             = "duplicate_application_identification"
   description      = "Identifies applications from competitions that are duplicates"
   role_arn         = data.aws_iam_role.existing_glue_role.arn
-  number_of_workers = 90
+  number_of_workers = 100
   worker_type      = "G.2X"
   timeout          = 5000
   tags = {

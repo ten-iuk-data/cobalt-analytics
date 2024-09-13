@@ -1,4 +1,5 @@
 project   = "duplicate_application_identification_job"
+aws_profile = "ukri_preprod_keys"
 s3_bucket = "iukpreprod-data-landing-zone"
 iam_role  = "preprod_data_transform_role"
 glue_database            = "preprod_semantic_db"
