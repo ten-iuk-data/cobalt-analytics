@@ -5,19 +5,16 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.30.0"
     }
-    }
   }
 
-  provider "aws" {
-    region = "eu-west-2"
-    profile = var.aws_profile
+    backend "s3" {
+      bucket = "placeholder"
+      key    = "placeholder"
+      region = "eu-west-2"
+    }
 }
 
-terraform {
-  backend "s3" {
-    bucket = "cobalt-analytics"
-    key    = "terraform/terraform.tfstate"
-    region = "eu-west-2"
-    profile = "ukri_staging_keys"
-  }
+provider "aws" {
+  region  = "eu-west-2"
+  profile = var.aws_profile
 }

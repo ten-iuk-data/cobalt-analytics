@@ -1,4 +1,5 @@
 project   = "duplicate_application_identification_job"
+aws_profile = "ukri_staging_keys"
 s3_bucket = "iukstaging-data-landing-zone"
 iam_role  = "staging_data_transform_role"
 glue_database            = "staging_semantic_db"

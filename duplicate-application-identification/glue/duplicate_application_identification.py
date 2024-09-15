@@ -110,7 +110,7 @@ def read_data(spark, bucket, key, db, schema=False):
         query = query.replace('db', db_name)
 
         athena = boto3.client('athena')
-        s3_output = f's3://{bucket}/{key}/athena-results/athena_query_results_folder'
+        s3_output = f's3://{bucket}/{key}/athena-results/cobalt_athena_query_results/'
         response = athena.start_query_execution(
             QueryString=query,
             QueryExecutionContext={'Database': db},
