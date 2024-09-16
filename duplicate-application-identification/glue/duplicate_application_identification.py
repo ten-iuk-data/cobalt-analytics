@@ -47,6 +47,8 @@ spark.conf.set("spark.default.parallelism", "400")
 spark.conf.set("spark.sql.autoBroadcastJoinThreshold", 52428800)
 spark.conf.set("spark.sql.broadcastTimeout", 1800)
 spark.conf.set("spark.sql.adaptive.enabled", "true")
+spark.conf.set("spark.sql.parquet.int96RebaseModeInWrite", "LEGACY")
+
 
 args = getResolvedOptions(sys.argv, [
     'glue_database', 
@@ -80,7 +82,7 @@ def enforce_schema(df):
     col("applicationstatus").alias("ApplicationStatus"),
     col("projectsetupstatus").alias("ProjectSetUpStatus"),
     col("ifsprojectid").alias("IFSProjectID"),
-    col("researchcategory").alias("ResearchCategory"),
+    col("researchcategory").cast(StringType()).alias("ResearchCategory"),
     col("innovationarea").alias("InnovationArea"),
     col("competitionkey").cast(LongType()).alias("CompetitionKey"),
     col("competitionname").alias("CompetitionName"),
