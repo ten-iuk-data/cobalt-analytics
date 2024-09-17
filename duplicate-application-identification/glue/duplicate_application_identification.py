@@ -1,4 +1,3 @@
-
 import sys
 import boto3
 import time
@@ -162,6 +161,17 @@ def write_data(df, bucket, key, partition_by=None, append_mode=True, partition=F
     if not partition:
         (df.coalesce(1).write.mode(mode).parquet(output_path))
 
+
+
+
+# delete data
+def delete_data(bucket, folder):
+    paginator = s3.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket, Prefix=folder):
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                s3.delete_object(Bucket=bucket, Key=obj['Key'])
+    print(f"All files in {folder} have been deleted.")
 
 
 
@@ -371,6 +381,9 @@ def main():
     cobalt_output_processed = args['cobalt_output_processed']
     business_rules_key = args['business_rules_key']
     sql_key = args['sql_key']
+    root_bucket = args['root_bucket']
+    athena_query_results_folder = args['athena_query_results_folder']
+
     
     new_apps = None
     all_apps = None
@@ -398,8 +411,8 @@ def main():
         # Update processed applications
         write_data(new_apps, semantic_bucket, cobalt_output_processed, partition=False, add_timestamp=True)
 
-        # Overwrite temp query results with the new query results
-        write_data(new_apps, semantic_bucket, cobalt_output_processed, append_mode=False)
+        # Delete temp query results for new applications
+        delete_data(root_bucket, athena_query_results_folder)
 
 
     except Exception as e:
