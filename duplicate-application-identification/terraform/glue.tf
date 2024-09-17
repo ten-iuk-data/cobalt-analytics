@@ -49,6 +49,8 @@ resource "aws_glue_job" "duplicate_application_identification" {
     "--cobalt_output_processed"   = var.cobalt_output_processed
     "--business_rules_key"        = var.business_rules_key
     "--sql_key"                   = var.sql_key
+    "--root_bucket"               = var.root_bucket
+    "--athena_query_results_folder" = var.athena_query_results_folder
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-continuous-log-filter"     = "true"
     "--continuous-log-logGroup"          = "/aws-glue/jobs/logs-v2"

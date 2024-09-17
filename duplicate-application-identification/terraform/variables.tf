@@ -65,6 +65,17 @@ variable "sql_key" {
   description = "The S3 key for the SQL script"
   type        = string
 }
+
+variable "root_bucket" {
+  description = "The root bucket for the SQL results"
+  type        = string
+}
+
+variable "athena_query_results_folder" {
+  description = "The temp folder for the SQL results"
+  type        = string
+}
+
 variable "glue_schedule_expression" {
   description = "Cron expression for scheduling the Glue job"
   default     = "cron(30 7 * * ? *)"
