@@ -62,7 +62,7 @@ variable "business_rules_key" {
 }
 
 variable "sql_key" {
-  description = "The S3 key for the SQL script"
+  description = "The S3 key for the SQL query"
   type        = string
 }
 

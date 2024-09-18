@@ -58,6 +58,8 @@ args = getResolvedOptions(sys.argv, [
     'cobalt_output_processed', 
     'business_rules_key', 
     'sql_key',
+    'root_bucket',
+    'athena_query_results_folder',
     'JOB_NAME'
 ])
 job_name = args.get('JOB_NAME', 'duplicate_application_identification')
