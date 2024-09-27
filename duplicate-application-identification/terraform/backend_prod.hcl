@@ -1,4 +1,4 @@
-bucket         = "cobalt-analytics"
-key            = "terraform/staging.tfstate"
+bucket         = "iukorg-terraform-state"
+key            = "duplicate-application-identification-script"
 region         = "eu-west-2"
-profile        = "ukri_staging_keys"
+profile        = "ukri_preprod_keys"
