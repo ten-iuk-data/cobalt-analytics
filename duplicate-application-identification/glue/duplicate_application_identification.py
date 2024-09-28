@@ -212,7 +212,7 @@ def approximate_matching(new_apps, all_apps, threshold=0.5):
     potential_matches = candidates.filter(col("datasetA.applicationid") < col("datasetB.applicationid"))
     columns = [
         "competitionkey", "applicationid", "applicationtitle", "applicationstatus", 
-        "combined_text", "projectsummary", "scope", "publicdescription"
+        "combined_text", "projectsummary", "scope", "publicdescription", "startdate"
     ]
     select_expr = (
         [col(f"datasetA.{c}").alias(f"a_{c}") for c in columns] +
