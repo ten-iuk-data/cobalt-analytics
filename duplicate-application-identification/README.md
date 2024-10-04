@@ -1,9 +1,11 @@
-## Solution - Architecture
+# Solution
 
-![screenshot](cobalt-analytics/duplicate-application-identification/cobalt-application-duplicate-application-Identification.jpg)
+## Architecture
+
+![screenshot](cobalt-application-duplicate-application-Identification.jpg)
 
 
-## Solution - Deployment Guide
+## Deployment Guide
 
 This document provides step-by-step instructions for deploying the duplicate application identification solution in different environments (staging, preprod, or prod) using Terraform. The solution is designed to be easily deployed across these environments using the appropriate configuration files.
 
