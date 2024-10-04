@@ -1,6 +1,7 @@
-# Solution - Overview
+## Solution - Architecture
 
-![screenshot](cobalt-analytics\duplicate-application-identification\cobalt-analytics/duplicate-application-identification/cobalt-application-duplicate-application-Identification.jpg)
+![screenshot](cobalt-analytics/duplicate-application-identification/cobalt-application-duplicate-application-Identification.jpg)
+
 
 ## Solution - Deployment Guide
 
