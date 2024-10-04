@@ -11,7 +11,7 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.storagelevel import StorageLevel
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf, concat, col, coalesce, lit, when, count, length, trim, first, current_date, broadcast, pandas_udf
+from pyspark.sql.functions import date_format, udf, concat, col, coalesce, lit, when, count, length, trim, first, current_date, broadcast, pandas_udf
 from pyspark.sql.types import *
 from pyspark.sql.window import Window
 from sentence_transformers import SentenceTransformer, util
@@ -79,7 +79,7 @@ def enforce_schema(df):
     col("publicdescription").alias("PublicDescription"),
     col("scope").alias("Scope"),
     col("startdatetimedatekey").cast(LongType()).alias("StartDateTimeDateKey"),
-    col("startdate").cast(TimestampType()).alias("StartDate"),
+    date_format(col("startdate").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("startdate"),
     col("applicationstatus").alias("ApplicationStatus"),
     col("projectsetupstatus").alias("ProjectSetUpStatus"),
     col("ifsprojectid").alias("IFSProjectID"),
@@ -87,7 +87,7 @@ def enforce_schema(df):
     col("innovationarea").alias("InnovationArea"),
     col("competitionkey").cast(LongType()).alias("CompetitionKey"),
     col("competitionname").alias("CompetitionName"),
-    col("submitteddate").cast(TimestampType()).alias("SubmittedDate"),
+    date_format(col("submitteddate").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("SubmittedDate"),
     col("fundingdecision").alias("FundingDecision"),
     col("fileentryname").alias("FileEntryName"),
     col("completion").cast(DoubleType()).alias("Completion"),
@@ -97,23 +97,24 @@ def enforce_schema(df):
     col("noinnovationareaapplicable").cast(LongType()).alias("NoInnovationAreaApplicable"),
     col("managefundingemaildate").cast(TimestampType()).alias("ManageFundingEmailDate"),
     col("isactive").cast(LongType()).alias("IsActive"),
-    col("validfrom").cast(TimestampType()).alias("ValidFrom"),
-    col("validto").cast(TimestampType()).alias("ValidTo"))
+    date_format(col("validfrom").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("validfrom"),
+    date_format(col("validto").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("validto"))
     
     return df
     
     
 
 # Read data
-def read_data(spark, bucket, key, db, schema=False):
+def read_data(spark, bucket, key, db, schema=False, cobalt_bucket=None):
     if key.endswith('.sql'):
-        response = s3.get_object(Bucket=bucket, Key=key)
+        response = s3.get_object(Bucket=cobalt_bucket, Key=key)
         query = response['Body'].read().decode('utf-8')
         db_name = db.split('.')[-1]
         query = query.replace('db', db_name)
 
         athena = boto3.client('athena')
-        s3_output = f's3://{bucket}/{key}/athena-results/cobalt_athena_query_results/'
+        s3_output = f's3://{bucket}/athena-results/cobalt_athena_query_results/'
+        
         response = athena.start_query_execution(
             QueryString=query,
             QueryExecutionContext={'Database': db},
@@ -319,6 +320,13 @@ def categorize_applications(new_apps, all_apps, rules):
     final_df = spark.createDataFrame([], final_schema)
     
     
+    if not new_apps or not all_apps or new_apps.count() == 0 or all_apps.count() == 0:
+        logger.info("One of new_apps or all_apps is empty")
+        logger.info(f"new_apps shape (rows, columns): {(new_apps.count(), len(new_apps.columns))}")
+        logger.info(f"all_apps shape (rows, columns): {(new_apps.count(), len(new_apps.columns))}")
+        return None
+    
+    
     # Stage 1: Approximate Matching
     potential_matches = approximate_matching(new_apps, all_apps)
     logger.info("After potential_matches")
@@ -364,7 +372,7 @@ def categorize_applications(new_apps, all_apps, rules):
             
         all_matches.append(final_df_part)
     final_df = reduce_func(lambda x, y: x.unionByName(y), all_matches)
-    final_df = final_df.dropDuplicates()
+    final_df = final_df.dropDuplicates(['applicationid', 'duplicate_applicationid', 'match_type'])
     
     logger.info(f"final_df columns: {final_df.columns}")
     logger.info(f"final_df shape (rows, columns): {(final_df.count(), len(final_df.columns))}")
@@ -393,7 +401,7 @@ def main():
     
     try:
         # Read new applications
-        new_apps = read_data(spark, cobalt_bucket, sql_key, glue_database, schema=True)
+        new_apps = read_data(spark, semantic_bucket, sql_key, glue_database, schema=True, cobalt_bucket=cobalt_bucket)
 
         # Read all applications
         all_apps = read_data(spark, semantic_bucket, semantic_input_key, glue_database)
@@ -404,14 +412,16 @@ def main():
         # Categorize applications
         final_df = categorize_applications(new_apps, all_apps, rules)
         
-        if final_df.count() > 0:
-            
-            # Save output data
+
+        # Save output data
+        if final_df is not None or final_df.count() > 0:
             final_df = final_df.repartition(200, "competitionkey")
             write_data(final_df, semantic_bucket, cobalt_output_duplicates, partition_by="competitionkey", partition=True)
         
+        
         # Update processed applications
-        write_data(new_apps, semantic_bucket, cobalt_output_processed, partition=False, add_timestamp=True)
+        if new_apps is not None or new_apps.count() > 0:
+            write_data(new_apps, semantic_bucket, cobalt_output_processed, partition=False, add_timestamp=True)
 
         # Delete temp query results for new applications
         delete_data(root_bucket, athena_query_results_folder)
