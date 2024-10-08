@@ -68,7 +68,6 @@ job.init(job_name, args)
 
 
 
-# enforce schema
 def enforce_schema(df):
     df = df.select(
     col("applicationkey").cast(LongType()).alias("ApplicationKey"),
@@ -79,7 +78,7 @@ def enforce_schema(df):
     col("publicdescription").alias("PublicDescription"),
     col("scope").alias("Scope"),
     col("startdatetimedatekey").cast(LongType()).alias("StartDateTimeDateKey"),
-    date_format(col("startdate").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("startdate"),
+    date_format(col("startdate").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("StartDate"),
     col("applicationstatus").alias("ApplicationStatus"),
     col("projectsetupstatus").alias("ProjectSetUpStatus"),
     col("ifsprojectid").alias("IFSProjectID"),
@@ -97,8 +96,8 @@ def enforce_schema(df):
     col("noinnovationareaapplicable").cast(LongType()).alias("NoInnovationAreaApplicable"),
     col("managefundingemaildate").cast(TimestampType()).alias("ManageFundingEmailDate"),
     col("isactive").cast(LongType()).alias("IsActive"),
-    date_format(col("validfrom").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("validfrom"),
-    date_format(col("validto").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("validto"))
+    date_format(col("validfrom").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("ValidFrom"),
+    date_format(col("validto").cast(TimestampType()), "yyyy-MM-dd HH:mm:ss.SSS").alias("ValidTo"))
     
     return df
     
