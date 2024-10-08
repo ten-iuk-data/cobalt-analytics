@@ -3,10 +3,10 @@ name: Deploy to Pre-prod
 on:
   workflow_dispatch:
   push:
-    branches: [preprod]
+    branches: [uat]
 
   pull_request:
-    branches: [preprod]
+    branches: [uat]
 
       
 permissions:
@@ -106,7 +106,7 @@ jobs:
 
       # If this is a PR post the changes
       - name: Push Terraform Output to PR
-        if: github.ref != 'refs/heads/preprod'
+        if: github.ref != 'refs/heads/uat'
         uses: actions/github-script@v6
         env:
           SUMMARY: "${{ steps.tf-plan-string.outputs.summary }}"
