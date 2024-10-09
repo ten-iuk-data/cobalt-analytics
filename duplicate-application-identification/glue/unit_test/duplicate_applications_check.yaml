@@ -1,0 +1,31 @@
+rules:
+  - name: double_funding
+    conditions:
+      - "col('a.applicationstatus') == 'ACCEPTED'"
+      - "col('b.applicationstatus') == 'ACCEPTED'"
+    match_type: double_funding
+    similarity_threshold: 0.7
+  - name: third_attempt
+    conditions:
+      - "col('a.applicationstatus') == 'REJECTED'"
+      - "col('b.applicationstatus') == 'REJECTED'"
+    window_aggregation:
+      condition: "count('b.applicationid')"
+      threshold: 2
+    match_type: third_attempt
+    similarity_threshold: 0.7
+  - name: multiple_applications_multiple_competitions
+    conditions:
+      - "col('a.competitionkey') != col('b.competitionkey')"
+      - "col('b.applicationstatus').isin(['SUBMITTED', 'REJECTED'])"
+    window_aggregation:
+      condition: "count('b.applicationid')"
+      threshold: 2
+    match_type: multiple_applications_multiple_competitions
+    similarity_threshold: 0.7
+  - name: multiple_applications_same_competition
+    conditions:
+      - "col('a.competitionkey') == col('b.competitionkey')"
+      - "col('b.applicationstatus').isin(['SUBMITTED', 'NOT_APPLICABLE'])"
+    match_type: multiple_applications_same_competition
+    similarity_threshold: 0.7

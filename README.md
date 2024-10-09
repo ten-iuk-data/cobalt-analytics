@@ -1,2 +1,2 @@
 # cobalt-analytics
-Cobalt analytics repository containing different analyitcs solutions repositories
+Cobalt analytics repository contains the code repository for the different solutions within cobalt
